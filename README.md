@@ -176,8 +176,3 @@ This project was developed as part of a trading analysis system showcasing multi
 ## 📄 License
 
 See LICENSE file for details.
-
-## 👨‍💻 Author
-
-Aryan Sinha (sinha.arya@northeastern.edu)
-
