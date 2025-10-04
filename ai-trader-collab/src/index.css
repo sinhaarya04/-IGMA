@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 13% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 13%;
+
+    /* Emerald primary for financial success */
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 160 84% 65%;
+
+    --secondary: 220 13% 95%;
+    --secondary-foreground: 220 13% 13%;
+
+    --muted: 220 13% 95%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Sentiment colors */
+    --bullish: 142 76% 36%;
+    --bullish-foreground: 0 0% 100%;
+    --bearish: 0 84% 60%;
+    --bearish-foreground: 0 0% 100%;
+    --neutral: 220 9% 46%;
+    --neutral-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 160 84% 39%;
+
+    --radius: 0.5rem;
+
+    /* Status indicators */
+    --status-connected: 142 76% 36%;
+    --status-disconnected: 0 84% 60%;
+    --status-connecting: 48 96% 53%;
+  }
+
+  .dark {
+    --background: 220 13% 9%;
+    --foreground: 220 13% 98%;
+
+    --card: 220 13% 13%;
+    --card-foreground: 220 13% 98%;
+
+    --popover: 220 13% 13%;
+    --popover-foreground: 220 13% 98%;
+
+    --primary: 160 84% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 160 84% 65%;
+
+    --secondary: 220 13% 16%;
+    --secondary-foreground: 220 13% 98%;
+
+    --muted: 220 13% 16%;
+    --muted-foreground: 220 9% 65%;
+
+    --accent: 160 84% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --bullish: 142 76% 45%;
+    --bullish-foreground: 0 0% 100%;
+    --bearish: 0 84% 60%;
+    --bearish-foreground: 0 0% 100%;
+    --neutral: 220 9% 65%;
+    --neutral-foreground: 220 13% 13%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
+    --ring: 160 84% 45%;
+
+    --status-connected: 142 76% 45%;
+    --status-disconnected: 0 84% 60%;
+    --status-connecting: 48 96% 53%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
