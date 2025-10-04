@@ -152,6 +152,27 @@ The demo mode showcases real AAPL analysis data:
 
 Perfect for presentations and showcasing capabilities!
 
+## 👨‍💻 Authors
+
+**Aryan Sinha**  
+📧 sinha.arya@northeastern.edu  
+🎓 Northeastern University
+
+**Shourya Dewansh**  
+🎓 Northeastern University
+
+**Arzu Malkoch**  
+🎓 Northeastern University
+
+### Project Development
+This project was developed as part of a trading analysis system showcasing multi-agent AI collaboration. The system integrates multiple specialized AI agents for comprehensive stock analysis with real-time visualization.
+
+### Built With
+- Custom multi-agent architecture using LangGraph
+- Anthropic Claude AI for agent intelligence
+- React + TypeScript frontend
+- FastAPI backend with WebSocket support
+
 ## 📄 License
 
 See LICENSE file for details.
@@ -159,3 +180,4 @@ See LICENSE file for details.
 ## 👨‍💻 Author
 
 Aryan Sinha (sinha.arya@northeastern.edu)
+
