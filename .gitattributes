@@ -1,0 +1,11 @@
+# Mark chart HTML files as documentation, not code
+backend/enhanced_visualization_*.html linguist-documentation
+backend/visualization_*.html linguist-documentation
+
+# Mark Python as the primary backend language
+*.py linguist-detectable=true
+
+# Mark TypeScript/React as the primary frontend language
+*.tsx linguist-detectable=true
+*.ts linguist-detectable=true
+
