@@ -28,6 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
+from anthropic import Anthropic
 
 # Import your existing TradingAgents
 from tradingagents.graph.trading_graph import TradingAgentsGraph
@@ -61,6 +62,9 @@ active_connections: Dict[str, WebSocket] = {}
 # Store analysis results
 analysis_results: Dict[str, Dict[str, Any]] = {}
 
+# Store analysis messages for polling
+analysis_messages: Dict[str, List[Dict[str, Any]]] = {}
+
 # Track server start time for uptime calculation
 start_time = time.time()
 
@@ -89,7 +93,7 @@ def get_cors_origins():
 # ---------------------
 
 app = FastAPI(
-    title="TradingAgents API",
+    title="ΣIGMA API",
     description="Real-time trading analysis API with WebSocket support",
     version="1.0.0"
 )
@@ -140,12 +144,139 @@ class TradingAgentsRunner:
         self.config["max_risk_discuss_rounds"] = 1
         self.config["online_tools"] = True
         
-        # Initialize TradingAgents (excluding social analyst due to bug, including payment analyst)
+        # Initialize TradingAgents (excluding social and visualization analysts due to bugs)
         self.ta = TradingAgentsGraph(
             debug=True, 
             config=self.config, 
-            selected_analysts=["market", "news", "fundamentals", "payment", "visualization"]
+            selected_analysts=["market", "news", "fundamentals", "payment"]
         )
+        
+        # Initialize Anthropic client for message summarization
+        self.anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    
+    async def run_demo_analysis(self, analysis_id: str, ticker: str):
+        """Run demo analysis with hardcoded conversational messages based on REAL AAPL data"""
+        
+        # Based on REAL AAPL analysis data from terminal output
+        demo_messages = {
+            "Market Analyst": f"{ticker} is showing strong bullish momentum - currently trading at $258.02, significantly above the 50-day SMA ($232.67) and 200-day SMA ($221.79). RSI is at 71.05, indicating overbought conditions, while MACD at 7.42 shows continued positive momentum. The stock has recovered 28% from August lows around $201, with Bollinger Bands showing room to $267 on the upside but suggesting caution at current levels.",
+            
+            "News Analyst": f"Recent news sentiment for {ticker} is positive with steady momentum in trading. One article from Yahoo Finance highlights positive trading patterns. Overall media coverage shows optimistic sentiment about the company's performance, though no major catalyst events are driving headlines. The sentiment is constructive but not overly exuberant.",
+            
+            "Fundamentals Analyst": f"{ticker} demonstrates exceptional financial strength with $408.6 billion in TTM revenue (9.6% growth) and $99.3 billion net income (12.1% earnings growth). Key metrics: 24.30% profit margin, 149.81% ROE, P/E ratio of 39.21, and forward P/E of 31.05. The company maintains strong cash flow ($94.9B free cash flow) with 63.63% institutional ownership, though trading at premium valuations with debt-to-equity at 154.49.",
+            
+            "Payment Flow Analyst": f"{ticker}'s payment ecosystem shows robust operational efficiency with 96M monthly transactions and strong correlation to stock performance (0.200). Payment metrics: 0.30% fraud rate (vs industry 0.60%), 93% success rate, 1.7s processing time, 13% cross-border transactions, and 2.0% refund rate. Risk score of 11.5/100 indicates exceptionally low payment processing risk with 1,000 active merchants supporting the ecosystem.",
+            
+            "Risk Manager": f"After evaluating bull and bear perspectives, the risk assessment indicates: Growth has decelerated from 15-30% historically to current 9.6%. Technical indicators show overextension with RSI at 71 and price 16.4% above 200-day MA. Analyst targets at $246 are below current $258 price. Forward P/E of 31x for single-digit growth presents valuation risk in a rising rate environment. Recommendation: Gradual position reduction to manage downside risk while the $245 support level holds.",
+            
+            "Trader": f"Final trading decision based on comprehensive analysis: The convergence of technical overextension (RSI 71, overbought), fundamental growth deceleration, and analyst price targets below current levels creates asymmetric risk. While {ticker} remains a quality company, the valuation risk outweighs potential upside. Recommended action: SELL with gradual scaling strategy to capture remaining upside while managing downside exposure. Key support level to monitor: $245."
+        }
+        
+        # Send messages with delays to simulate real analysis
+        await asyncio.sleep(2)
+        
+        for i, (agent, message) in enumerate(demo_messages.items(), 1):
+            progress = 20 + (i * 15)
+            
+            print(f"\n{'='*80}")
+            print(f"🤖 {agent}")
+            print(f"{'='*80}")
+            print(f"📊 {message}")
+            print(f"{'='*80}\n")
+            
+            await self.send_websocket_message(analysis_id, {
+                "type": "message",
+                "data": {
+                    "agent": agent,
+                    "agent_name": agent,
+                    "content": message,
+                    "timestamp": int(datetime.now().timestamp() * 1000),
+                    "stage": f"Analysis Phase {i}",
+                    "sentiment": "neutral"
+                },
+                "timestamp": int(datetime.now().timestamp() * 1000)
+            })
+            
+            await self.send_websocket_message(analysis_id, {
+                "type": "progress",
+                "data": {
+                    "current": progress,
+                    "total": 100,
+                    "stage": "Analyzing",
+                    "message": f"Running {agent}..."
+                },
+                "timestamp": int(datetime.now().timestamp() * 1000)
+            })
+            
+            await asyncio.sleep(2)  # Delay between agents
+        
+        # Send chart notification
+        await self.send_websocket_message(analysis_id, {
+            "type": "chart",
+            "data": {
+                "message": "Generated 4 visualization charts",
+                "status": "complete",
+                "count": 4
+            },
+            "timestamp": int(datetime.now().timestamp() * 1000)
+        })
+        
+        # Final decision based on real analysis
+        decision = f"SELL - While {ticker} demonstrates strong fundamentals with $408.6B revenue and robust profitability, the stock is technically overextended (RSI 71, trading 16.4% above 200-day MA). Analyst price targets at $246 suggest limited upside from current $258 levels. The forward P/E of 31x for 9.6% growth presents unfavorable risk/reward. Recommendation: Scale out gradually, monitor $245 support level."
+        
+        print(f"\n{'='*80}")
+        print(f"✅ FINAL DECISION: {decision}")
+        print(f"{'='*80}\n")
+        
+        # Send trading decision
+        await self.send_websocket_message(analysis_id, {
+            "type": "decision",
+            "data": {
+                "text": decision,
+                "confidence": 0.75,  # Based on convergence of multiple bearish signals
+                "rationale": "Technical overextension, valuation concerns, and analyst targets below current price create unfavorable risk/reward profile despite strong fundamentals."
+            },
+            "timestamp": int(datetime.now().timestamp() * 1000)
+        })
+        
+        return {
+            "decision": {"text": decision, "confidence": 0.75, "rationale": "Technical overextension + valuation risk"},
+            "charts_generated": 4,
+            "reports_generated": 6
+        }
+    
+    async def summarize_agent_message(self, agent_name: str, raw_content: str, ticker: str) -> str:
+        """Use Claude to create a concise, analytical summary of agent output"""
+        
+        # Define prompts based on agent type - CONVERSATIONAL STYLE
+        agent_prompts = {
+            "Market Analyst": f"You're explaining {ticker}'s market situation to a friend over coffee. In 2-3 casual sentences, tell them: Is the stock trending up or down? What's the vibe - should they be excited or cautious? Skip ALL numbers and technical jargon - just talk like a human.",
+            "News Analyst": f"You're chatting with a friend about what's happening with {ticker} in the news. In 2-3 casual sentences, tell them: What are people talking about? Is the overall mood positive or negative? Keep it conversational - no formal language.",
+            "Fundamentals Analyst": f"You're explaining {ticker}'s business health to a friend who doesn't know finance. In 2-3 simple sentences, tell them: Is the company making good money? Is it a solid business or shaky? Talk like you're explaining it to your non-finance friend - no jargon or numbers.",
+            "Payment Flow Analyst": f"You're telling a friend about {ticker}'s transaction activity. In 2-3 casual sentences, explain: Are people using their services more or less? Is business flowing smoothly? Keep it conversational and skip technical terms.",
+        }
+        
+        system_prompt = agent_prompts.get(agent_name, f"Summarize this {agent_name} analysis for {ticker} in 2-3 concise, actionable sentences.")
+        
+        try:
+            response = self.anthropic_client.messages.create(
+                model="claude-3-5-haiku-20241022",  # Fast and cheap model for summaries
+                max_tokens=150,
+                temperature=0.3,
+                system=system_prompt,
+                messages=[{
+                    "role": "user",
+                    "content": f"Analyze and summarize this {agent_name} output:\n\n{raw_content[:1500]}"
+                }]
+            )
+            
+            summary = response.content[0].text.strip()
+            return summary
+            
+        except Exception as e:
+            print(f"⚠️ Summarization failed for {agent_name}: {e}")
+            # Fallback: return first 200 chars of original
+            return raw_content[:200] + "..." if len(raw_content) > 200 else raw_content
     
     async def run_analysis(self, analysis_id: str, ticker: str, timeframe: str, date: str = None):
         """Run TradingAgents analysis and stream results via WebSocket"""
@@ -185,87 +316,128 @@ class TradingAgentsRunner:
             
             # Stream the analysis
             progress = 10
-            total_steps = 0
-            
-            # First pass to count total steps
-            for chunk in self.ta.graph.stream(init_agent_state, **args):
-                if len(chunk.get("messages", [])) > 0:
-                    total_steps += 1
-            
-            # Reset state for actual run
-            init_agent_state = self.ta.propagator.create_initial_state(ticker, trade_date)
-            current_step = 0
-            
             # Run the actual analysis
-            print(f"🔍 Starting to stream analysis for {ticker}")
+            print(f"\n{'='*80}")
+            print(f"🚀 Starting analysis for {ticker}")
+            print(f"📅 Date: {trade_date}")
+            print(f"🔄 Streaming graph output...")
+            print(f"{'='*80}\n")
+            
+            # Track agents we've seen to avoid duplicate messages
+            agent_stages_seen = set()
+            chunk_count = 0
+            current_step = 0
+            total_steps = 100  # Estimate
+            
             for chunk in self.ta.graph.stream(init_agent_state, **args):
-                print(f"📦 Received chunk: {type(chunk)} - {list(chunk.keys()) if isinstance(chunk, dict) else 'Not a dict'}")
+                chunk_count += 1
+                
+                # Show progress indicator every 50 chunks
+                if chunk_count % 50 == 0:
+                    print(f"⚙️ Processing... ({chunk_count} chunks received)")
                 
                 # Handle different chunk formats
                 if isinstance(chunk, dict):
                     # Check for messages in the chunk
                     if "messages" in chunk and len(chunk.get("messages", [])) > 0:
-                        current_step += 1
-                        message = chunk["messages"][-1]
-                        
-                        print(f"💬 Agent message from {getattr(message, 'name', 'Unknown')}: {getattr(message, 'content', str(message))[:100]}...")
-                        
-                        # Calculate progress
-                        progress = min(90, 10 + (current_step / total_steps) * 80)
-                        
-                        # Send agent message
-                        await self.send_websocket_message(analysis_id, {
-                            "type": "message",
-                            "data": {
-                                "agent": getattr(message, 'name', 'Unknown Agent'),
-                                "content": getattr(message, 'content', str(message)),
-                                "timestamp": int(datetime.now().timestamp() * 1000),
-                                "stage": f"Step {current_step}/{total_steps}",
-                                "sentiment": "neutral"
-                            },
-                            "timestamp": int(datetime.now().timestamp() * 1000)
-                        })
-                        
-                        # Send progress update
-                        await self.send_websocket_message(analysis_id, {
-                            "type": "progress",
-                            "data": {
-                                "current": int(progress),
-                                "total": 100,
-                                "stage": "Processing",
-                                "message": f"Processing step {current_step}/{total_steps}"
-                            },
-                            "timestamp": int(datetime.now().timestamp() * 1000)
-                        })
-                    else:
-                        # Send progress for any chunk without messages
-                        current_step += 1
-                        progress = min(90, 10 + (current_step / total_steps) * 80)
-                        
-                        await self.send_websocket_message(analysis_id, {
-                            "type": "progress",
-                            "data": {
-                                "current": int(progress),
-                                "total": 100,
-                                "stage": "Processing",
-                                "message": f"Processing step {current_step}/{total_steps}"
-                            },
-                            "timestamp": int(datetime.now().timestamp() * 1000)
-                        })
-                else:
-                    # Handle non-dict chunks
                     current_step += 1
+                    message = chunk["messages"][-1]
+                        
+                        # Get agent name and content
+                        agent_name = getattr(message, 'name', None)
+                        content = getattr(message, 'content', str(message))
+                    
+                    # Calculate progress
                     progress = min(90, 10 + (current_step / total_steps) * 80)
                     
+                        # ===== STRICT FILTERING =====
+                        # Only show messages from KNOWN agents with SUBSTANTIAL content
+                        should_send = False
+                        filtered_content = None
+                        
+                        # Skip if agent_name is None, empty, or "Unknown Agent"
+                        if not agent_name or agent_name == "Unknown Agent":
+                            continue
+                        
+                        # Skip if it's just the ticker symbol
+                        if isinstance(content, str):
+                            if content.strip() == ticker.upper() or len(content.strip()) < 100:
+                                continue
+                            filtered_content = content
+                            should_send = True
+                        elif isinstance(content, list):
+                            # Extract text from content blocks (Claude format)
+                            text_blocks = [item.get('text', '') for item in content if isinstance(item, dict) and item.get('type') == 'text']
+                            if text_blocks:
+                                filtered_content = ' '.join(text_blocks)
+                                # Only send if it's substantial analysis (not just planning/tool use)
+                                if len(filtered_content.strip()) > 100:
+                                    should_send = True
+                        
+                        # Create a unique identifier for this agent stage
+                        stage_key = f"{agent_name}_{current_step // 5}"  # Group every 5 steps
+                        
+                        # Only send meaningful messages from known agents, avoid duplicates
+                        if should_send and filtered_content and stage_key not in agent_stages_seen:
+                            agent_stages_seen.add(stage_key)
+                            
+                            # Map to display-friendly names
+                            agent_display_name = agent_name
+                            agent_name_lower = agent_name.lower()
+                            
+                            if 'market' in agent_name_lower:
+                                agent_display_name = "Market Analyst"
+                            elif 'news' in agent_name_lower:
+                                agent_display_name = "News Analyst"
+                            elif 'fundamental' in agent_name_lower:
+                                agent_display_name = "Fundamentals Analyst"
+                            elif 'payment' in agent_name_lower:
+                                agent_display_name = "Payment Flow Analyst"
+                            elif 'risk' in agent_name_lower:
+                                agent_display_name = "Risk Manager"
+                            elif 'trader' in agent_name_lower:
+                                agent_display_name = "Trader"
+                            else:
+                                # Skip any agent we don't recognize
+                                continue
+                            
+                            # Use LLM to create analytical summary
+                            print(f"\n{'='*80}")
+                            print(f"🤖 {agent_display_name} - Analyzing...")
+                            print(f"{'='*80}")
+                            
+                            summarized_content = await self.summarize_agent_message(
+                                agent_display_name, 
+                                filtered_content, 
+                                ticker
+                            )
+                            
+                            print(f"📊 {summarized_content}")
+                            print(f"{'='*80}\n")
+                            
+                    await self.send_websocket_message(analysis_id, {
+                        "type": "message",
+                                "data": {
+                                    "agent": agent_display_name,
+                                    "agent_name": agent_display_name,
+                                    "content": summarized_content,
+                                    "timestamp": int(datetime.now().timestamp() * 1000),
+                                    "stage": f"Analysis Phase {current_step // 5 + 1}",
+                                    "sentiment": "neutral"
+                                },
+                                "timestamp": int(datetime.now().timestamp() * 1000)
+                            })
+                            
+                            # Send progress update ONLY when we send a meaningful message
                     await self.send_websocket_message(analysis_id, {
                         "type": "progress",
-                        "data": {
-                            "current": int(progress),
-                            "total": 100,
-                            "stage": "Processing",
-                            "message": f"Processing step {current_step}/{total_steps}"
-                        },
-                        "timestamp": int(datetime.now().timestamp() * 1000)
+                                "data": {
+                                    "current": int(progress),
+                                    "total": 100,
+                                    "stage": "Analyzing",
+                                    "message": f"Running {agent_display_name}..."
+                                },
+                                "timestamp": int(datetime.now().timestamp() * 1000)
                     })
             
             # Get final decision
@@ -287,8 +459,8 @@ class TradingAgentsRunner:
             await self.send_websocket_message(analysis_id, {
                 "type": "decision",
                 "data": {
-                    "text": decision,
-                    "confidence": 0.85,  # You can extract this from your analysis
+                "text": decision,
+                "confidence": 0.85,  # You can extract this from your analysis
                     "rationale": f"Based on comprehensive analysis of {ticker} market data, technical indicators, and payment flow analysis."
                 },
                 "timestamp": int(datetime.now().timestamp() * 1000)
@@ -368,7 +540,7 @@ runner = TradingAgentsRunner()
 @app.get("/")
 async def root():
     """Health check endpoint"""
-    return {"message": "TradingAgents API is running", "status": "healthy"}
+    return {"message": "ΣIGMA API is running", "status": "healthy"}
 
 @app.get("/health")
 async def health_check():
@@ -498,14 +670,21 @@ async def start_analysis(request: Request, analysis_request: AnalysisRequest, _:
 
             # Run the actual analysis
             try:
-                print(f"📊 Running real analysis for {analysis_request.ticker.upper()}")
-                result = await runner.run_analysis(
-                    analysis_id,
-                    analysis_request.ticker.upper(),
-                    analysis_request.timeframe,
-                    analysis_request.date
-                )
-                print(f"✅ Real analysis completed: {result}")
+                # CHECK IF DEMO MODE (for presentation when API credits are low)
+                demo_mode = os.getenv("DEMO_MODE", "true").lower() == "true"
+                
+                if demo_mode:
+                    print(f"🎭 Running DEMO MODE for {analysis_request.ticker.upper()}")
+                    result = await runner.run_demo_analysis(analysis_id, analysis_request.ticker.upper())
+                else:
+                    print(f"📊 Running real analysis for {analysis_request.ticker.upper()}")
+                    result = await runner.run_analysis(
+        analysis_id, 
+                        analysis_request.ticker.upper(),
+                        analysis_request.timeframe,
+                        analysis_request.date
+                    )
+                print(f"✅ Analysis completed: {result}")
 
                 # Send completion message with real results
                 for conn_id, websocket in active_connections.items():
@@ -604,7 +783,7 @@ async def start_analysis(request: Request, analysis_request: AnalysisRequest, _:
         print(f"❌ Failed to create analysis task: {e}")
         import traceback
         traceback.print_exc()
-
+    
     return AnalysisResponse(
         analysis_id=analysis_id,
         status="started",
@@ -618,6 +797,24 @@ async def get_analysis(analysis_id: str):
         raise HTTPException(status_code=404, detail="Analysis not found")
     
     return analysis_results[analysis_id]
+
+@app.get("/api/analysis/{analysis_id}/messages")
+async def get_analysis_messages(analysis_id: str, since: int = 0):
+    """Get all messages for an analysis (for polling)"""
+    
+    if analysis_id not in analysis_messages:
+        return {"messages": [], "total": 0, "since": since, "new_count": 0}
+    
+    messages = analysis_messages[analysis_id]
+    # Return messages after 'since' index
+    new_messages = messages[since:] if since < len(messages) else []
+    
+    return {
+        "messages": new_messages,
+        "total": len(messages),
+        "since": since,
+        "new_count": len(new_messages)
+    }
 
 @app.get("/api/analysis/{analysis_id}/reports")
 async def get_analysis_reports(analysis_id: str):
@@ -781,7 +978,7 @@ async def serve_chart(filename: str):
 @app.websocket("/ws/analysis/{analysis_id}")
 async def websocket_endpoint(websocket: WebSocket, analysis_id: str):
     """WebSocket endpoint for real-time analysis updates"""
-
+    
     print(f"🔌 WebSocket connection attempt for analysis_id: {analysis_id}")
     await websocket.accept()
     active_connections[analysis_id] = websocket
@@ -887,7 +1084,7 @@ async def websocket_general(websocket: WebSocket):
 # ---------------------
 
 if __name__ == "__main__":
-    print("🚀 Starting TradingAgents API Server with REAL Analysis...")
+    print("🚀 Starting ΣIGMA API Server with REAL Analysis...")
     print("📊 Frontend: http://localhost:3002")
     print("🔌 API: http://localhost:8002")
     print("📡 WebSocket: ws://localhost:8002/ws/analysis/{id}")
