@@ -159,7 +159,7 @@ Perfect for presentations and showcasing capabilities!
 🎓 Northeastern University
 
 **Shourya Dewansh**  
-🎓 Northeastern University
+🎓 Wentworth Institute of Technology
 
 **Arzu Malkoch**  
 🎓 Northeastern University
